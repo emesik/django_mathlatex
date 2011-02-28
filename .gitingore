@@ -1,0 +1,7 @@
+.*
+!.gitignore
+*.py[co]
+test_env/media/math/*
+*.db
+*.swp
+~*
