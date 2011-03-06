@@ -5,6 +5,7 @@ Render PNG images of math formulas written in LaTeX notation.
 It's simple as hell:
 
 ::
+
     {% load mathlatex %}
     {% math %}
         E = mc^2
@@ -20,6 +21,7 @@ The required tools are:
 The configuration consists of one declaration in ``settings.py``:
 
 ::
+
     MATHLATEX_IMAGES_DIR = 'math/'        # Or wherever you wish under MEDIA_ROOT
 
 Examples
@@ -30,6 +32,7 @@ Always include ``{% load mathlatex %}`` in your template.
 To simply put a formula inline, write:
 
 ::
+
     <p>
     Einstein said that {% math %}E = mc^2{% endmath %}.
     </p>
@@ -61,6 +64,7 @@ To simply put a formula inline, write:
 You may also obtain the instance of formula's model by assigning it to a value:
 
 ::
+
     {% math as einstein %}E=mc^2{% endmath %}
     <p>
     The following equation illustrates math-energy equivalence:
@@ -70,6 +74,7 @@ You may also obtain the instance of formula's model by assigning it to a value:
 Alternatively, you may pass an equation as context variable:
 
 ::
+
     from django.template import Template, Context
     t3 = Template("{% load mathlatex %}{% math %}{{ einstein }}{% endmath %}")
     ctx = Context({'einstein': 'E = mc ^ 2'})
