@@ -1,7 +1,26 @@
+import os
 import re
-from hashlib import sha1
+import shutil
+import sys
+import tempfile
 from django.conf import settings
+from django.core.files import File
 from django.db import models
+from hashlib import sha1
+
+_latex_template = r"""
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{bm}
+\pagestyle{empty}
+\begin{document}
+\begin{math}
+%s
+\end{math}
+\end{document}
+"""
 
 def _hash_chain(content):
 	while True:
@@ -10,7 +29,7 @@ def _hash_chain(content):
 		yield h
 
 def squash_formula(formula):
-	return re.compile(r'\s([^\\]').sub(' \\1', formula)
+	return re.compile(r'\s([^\\])').sub(' \\1', formula)
 
 
 class FormulaManager(models.Manager):
@@ -19,16 +38,24 @@ class FormulaManager(models.Manager):
 		hc = _hash_chain(formula)
 		h = hc.next()
 		while True:
-			f = Formula.objects.get(formula_hash=h)
+			f = self.get(formula_hash=h)
 			if f.formula == formula:
 				return f
 			h = hc.next()
+
+	def get_or_create_for_formula(self, formula):
+		try:
+			return self.get_for_formula(formula)
+		except Formula.DoesNotExist:
+			return self.create(formula=formula)
 
 
 class Formula(models.Model):
 	formula = models.TextField()
 	formula_hash = models.CharField(max_length=32, unique=True, db_index=True)
 	image = models.ImageField(upload_to=settings.MATHLATEX_IMAGES_DIR)
+
+	objects = FormulaManager()
 
 	def save(self, *args, **kwargs):
 		self.formula = squash_formula(self.formula)
@@ -38,4 +65,27 @@ class Formula(models.Model):
 		while Formula.objects.filter(formula_hash=h).exists():
 			h = hc.next()
 		self.formula_hash = h
-		super(Formula, self).save(*args, **kwargs)
+		self._gen_image()
+		return super(Formula, self).save(*args, **kwargs)
+
+	def _gen_image(self):
+		workdir = tempfile.gettempdir()
+		fd, texfile = tempfile.mkstemp('.tex', 'formula', workdir, True)
+		fh = os.fdopen(fd, 'w+')
+		fh.write(_latex_template % self.formula)
+		fh.close()
+		latex_command = 'latex -halt-on-error -output-directory %s %s' % \
+						(workdir, texfile)
+		retcode = os.system(latex_command)
+		if retcode != 0:
+			raise ValueError("latex returned code %s for formula:\n%s" % (retcode, formula))
+		dvifile = texfile.replace('.tex', '.dvi')
+		pngfile = texfile.replace('.tex', '.png')
+		dvipng_command = "dvipng -T tight -z 9 -bg Transparent -o %s %s" % (pngfile, dvifile)
+		retcode = os.system(dvipng_command)
+		if retcode != 0:
+			raise ValueError("dvipng returned code %s for formula:\n%s" % (retcode, formula))
+		self.image.save(os.path.basename(pngfile), File(open(pngfile, 'rb')), save=False)
+		os.remove(texfile)
+		os.remove(dvifile)
+		os.remove(pngfile)
