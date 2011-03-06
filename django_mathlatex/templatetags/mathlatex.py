@@ -1,5 +1,6 @@
 from django import template
 from django.conf import settings
+from django.utils.html import escape
 from .. import models
 
 register = template.Library()
@@ -11,12 +12,14 @@ class MathLatexNode(template.Node):
 
 	def render(self, context):
 		content = self.nodelist.render(context)
+		if not len(content.strip()):
+			return u''
 		f = models.Formula.objects.get_or_create_for_formula(content)
 		if self.varname:
 			context[self.varname] = f
 			return u''
 		else:
-			return u'<img src="%s" alt="%s" />' % (f.image.url, content)
+			return u'<img src="%s" alt="%s" />' % (f.image.url, escape(f.formula))
 
 
 @register.tag('math')

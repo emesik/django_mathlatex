@@ -9,16 +9,16 @@ from django.db import models
 from hashlib import sha1
 
 _latex_template = r"""
-\documentclass{article}
+\documentclass[11pt]{article}
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{amssymb}
 \usepackage{bm}
 \pagestyle{empty}
 \begin{document}
-\begin{math}
+\begin{equation*}
 %s
-\end{math}
+\end{equation*}
 \end{document}
 """
 
@@ -29,7 +29,10 @@ def _hash_chain(content):
 		yield h
 
 def squash_formula(formula):
-	return re.compile(r'\s([^\\])').sub(' \\1', formula)
+	f = re.sub(r'(\W)\s+(\W|\w)', '\\1\\2',
+			re.sub(r'(\w)\s+(\W)', '\\1\\2',
+				re.sub(r'(\w)\s+(\w)', '\\1 \\2', formula))).strip()
+	return f
 
 
 class FormulaManager(models.Manager):
@@ -74,17 +77,18 @@ class Formula(models.Model):
 		fh = os.fdopen(fd, 'w+')
 		fh.write(_latex_template % self.formula)
 		fh.close()
-		latex_command = 'latex -halt-on-error -output-directory %s %s' % \
-						(workdir, texfile)
+		latex_command = 'latex -halt-on-error -output-directory %s %s %s' % \
+						(workdir, texfile, '' if settings.DEBUG else '> /dev/null 2>&1')
 		retcode = os.system(latex_command)
 		if retcode != 0:
-			raise ValueError("latex returned code %s for formula:\n%s" % (retcode, formula))
+			raise ValueError("latex returned code %s for formula:\n%s" % (retcode, self.formula))
 		dvifile = texfile.replace('.tex', '.dvi')
 		pngfile = texfile.replace('.tex', '.png')
-		dvipng_command = "dvipng -T tight -z 9 -bg Transparent -o %s %s" % (pngfile, dvifile)
+		dvipng_command = 'dvipng -T tight -z 9 -bg Transparent -o %s %s %s' % \
+						(pngfile, dvifile, '' if settings.DEBUG else '> /dev/null 2>&1')
 		retcode = os.system(dvipng_command)
 		if retcode != 0:
-			raise ValueError("dvipng returned code %s for formula:\n%s" % (retcode, formula))
+			raise ValueError("dvipng returned code %s for formula:\n%s" % (retcode, self.formula))
 		self.image.save(os.path.basename(pngfile), File(open(pngfile, 'rb')), save=False)
 		os.remove(texfile)
 		os.remove(dvifile)
