@@ -55,7 +55,7 @@ class FormulaManager(models.Manager):
 
 class Formula(models.Model):
 	formula = models.TextField()
-	formula_hash = models.CharField(max_length=32, unique=True, db_index=True)
+	formula_hash = models.CharField(max_length=40, unique=True, db_index=True)
 	image = models.ImageField(upload_to=settings.MATHLATEX_IMAGES_DIR)
 
 	objects = FormulaManager()
