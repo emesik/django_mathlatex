@@ -67,7 +67,7 @@ You may also obtain the instance of formula's model by assigning it to a value:
 
     {% math as einstein %}E=mc^2{% endmath %}
     <p>
-    The following equation illustrates math-energy equivalence:
+    The following equation illustrates mass-energy equivalence:
     </p>
     <img src="{{ einstein.image.url }}" alt="Mass - energy equivalence" />
 
