@@ -33,3 +33,7 @@ def do_mathlatex(parser, token):
 		return MathLatexNode(nodelist, bits[2])
 	raise template.TemplateSyntaxError(
 			"%s tag syntax is {%% %s [as <variable_name>] %%}" % (bits[0], bits[0]))
+
+@register.filter('math')
+def mathlatex_filter(value):
+	return template.Template(value).render(template.Context(None))
