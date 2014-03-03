@@ -79,3 +79,7 @@ Alternatively, you may pass an equation as context variable:
     t3 = Template("{% load mathlatex %}{% math %}{{ einstein }}{% endmath %}")
     ctx = Context({'einstein': 'E = mc ^ 2'})
 
+Also you could use math as filter in templates
+
+::
+	{{text|math}}
